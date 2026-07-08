@@ -1,0 +1,13 @@
+{
+  "appId": "com.perfectfit.game",
+  "appName": "Perfect Fit",
+  "webDir": "www",
+  "backgroundColor": "#191036",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never",
+    "backgroundColor": "#191036"
+  }
+}

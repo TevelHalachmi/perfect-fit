@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#191036">
+  <meta name="description" content="Perfect Fit — a lovely little game about precision (and rage). Hold to grow, release when it fits.">
+  <title>Perfect Fit</title>
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+  <canvas id="game" aria-label="Perfect Fit game area"></canvas>
+
+  <div id="hud" class="hud hidden" aria-hidden="true"></div>
+
+  <div id="screen-title" class="screen hidden"></div>
+  <div id="screen-results" class="screen hidden"></div>
+  <div id="screen-shop" class="screen panel hidden"></div>
+  <div id="screen-settings" class="screen panel hidden"></div>
+
+  <div id="banner-layer"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+
+# Capacitor native platforms (regenerable: npx cap add android|ios)
+android/
+ios/
+
+# Test artifacts
+shots/
+*.log
+.DS_Store

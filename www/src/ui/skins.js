@@ -1,0 +1,98 @@
+// Visual identity of each skin: background, shape fill, outline, face and
+// particle palette. Keyed by the catalog's skin ids (core owns ownership;
+// this file only owns looks).
+
+export const SKIN_STYLES = {
+  classic: {
+    bg: ['#2c1c62', '#191036'],
+    shape: ['#ffa5c8', '#ff5fa2'],
+    shapeEdge: '#e04687',
+    outline: 'rgba(255,255,255,0.8)',
+    glow: '#ff5fa2',
+    face: '#3a2549',
+    blush: 'rgba(255,80,130,0.4)',
+    particles: ['#ff5fa2', '#3ee6c1', '#ffd166', '#8f7bff', '#ffffff'],
+    dots: 'rgba(255,255,255,0.20)',
+  },
+  candy: {
+    bg: ['#4b2a6e', '#2a1547'],
+    shape: ['#ffe3f2', '#ff9ed2'],
+    shapeEdge: '#f272b6',
+    outline: 'rgba(255,240,250,0.85)',
+    glow: '#ff9ed2',
+    face: '#5b3a63',
+    blush: 'rgba(255,110,170,0.45)',
+    particles: ['#ff9ed2', '#a5f8e3', '#fff3a5', '#c9b6ff', '#ffffff'],
+    dots: 'rgba(255,210,240,0.22)',
+  },
+  ocean: {
+    bg: ['#0e2a52', '#081630'],
+    shape: ['#7de8ff', '#2aa9dd'],
+    shapeEdge: '#1f86b8',
+    outline: 'rgba(210,245,255,0.85)',
+    glow: '#4cc9f0',
+    face: '#0d3550',
+    blush: 'rgba(60,190,255,0.4)',
+    particles: ['#4cc9f0', '#80ffdb', '#48bfe3', '#5390d9', '#ffffff'],
+    dots: 'rgba(140,220,255,0.20)',
+  },
+  neon: {
+    bg: ['#0d0d17', '#050508'],
+    shape: ['#3dffc8', '#00d68f'],
+    shapeEdge: '#00ffa2',
+    outline: 'rgba(0,255,200,0.9)',
+    glow: '#00ffc8',
+    face: '#04241a',
+    blush: 'rgba(0,255,170,0.35)',
+    particles: ['#00ffc8', '#ff00e5', '#00b3ff', '#faff00', '#ffffff'],
+    dots: 'rgba(0,255,200,0.18)',
+  },
+  sunset: {
+    bg: ['#6d2a63', '#2b1140'],
+    shape: ['#ffd08a', '#ff8f5e'],
+    shapeEdge: '#e86a3c',
+    outline: 'rgba(255,230,200,0.85)',
+    glow: '#ff9e64',
+    face: '#5c2c1e',
+    blush: 'rgba(255,120,90,0.45)',
+    particles: ['#ff8f5e', '#ffd166', '#ff5fa2', '#c77dff', '#ffffff'],
+    dots: 'rgba(255,190,150,0.22)',
+  },
+  galaxy: {
+    bg: ['#1b1b4d', '#0a0a24'],
+    shape: ['#c3b4ff', '#8f7bff'],
+    shapeEdge: '#6f5ae0',
+    outline: 'rgba(220,210,255,0.85)',
+    glow: '#a48fff',
+    face: '#241a52',
+    blush: 'rgba(160,130,255,0.45)',
+    particles: ['#8f7bff', '#4cc9f0', '#ff5fa2', '#ffffff', '#ffd166'],
+    dots: 'rgba(255,255,255,0.35)',
+  },
+  lava: {
+    bg: ['#3d0f0f', '#1c0505'],
+    shape: ['#ffb25e', '#ff5e3a'],
+    shapeEdge: '#d63a1f',
+    outline: 'rgba(255,200,160,0.85)',
+    glow: '#ff6b35',
+    face: '#4a1204',
+    blush: 'rgba(255,90,40,0.45)',
+    particles: ['#ff5e3a', '#ffd166', '#ff9e2c', '#ff2e00', '#ffe8c2'],
+    dots: 'rgba(255,140,80,0.25)',
+  },
+  gold: {
+    bg: ['#332410', '#171006'],
+    shape: ['#ffe9a3', '#ffc24b'],
+    shapeEdge: '#d99a1f',
+    outline: 'rgba(255,235,180,0.9)',
+    glow: '#ffd166',
+    face: '#5c4008',
+    blush: 'rgba(255,180,60,0.45)',
+    particles: ['#ffd166', '#fff3c4', '#ffb703', '#ffffff', '#f4a900'],
+    dots: 'rgba(255,220,140,0.28)',
+  },
+};
+
+export function getSkinStyle(id) {
+  return SKIN_STYLES[id] ?? SKIN_STYLES.classic;
+}
