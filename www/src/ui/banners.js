@@ -17,4 +17,6 @@ export const MODIFIER_BANNERS = {
   drift: '🎈 NEW TWIST: THE TARGET WANDERS!',
   oscillate: '🌊 NEW TWIST: GROWTH SURGES!',
   ghost: '👻 NEW TWIST: THE TARGET HIDES!',
+  invert: '🔄 NEW TWIST: IT SHRINKS — RELEASE IN TIME!',
+  wind: '💨 NEW TWIST: THE WIND PUSHES!',
 };

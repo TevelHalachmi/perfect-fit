@@ -63,9 +63,12 @@ export class Renderer {
     if (frame.mode === 'title') {
       this.#drawTitleShape(frame, style);
     } else if (frame.view) {
+      // boss rounds get a camera zoom: target AND player scale together so
+      // what you see is exactly what's judged
+      const baseR = this.#R * (frame.view.boss ? TUNING.boss.visualScale : 1);
       // outline drawn on top so the reference stays visible at near-fit sizes
-      if (!frame.hidePlayer) this.#drawPlayer(frame, style);
-      this.#drawTarget(frame.view, style, frame.t);
+      if (!frame.hidePlayer) this.#drawPlayer(frame, style, baseR);
+      this.#drawTarget(frame.view, style, frame.t, baseR);
     }
 
     frame.particles?.draw(ctx);
@@ -125,11 +128,11 @@ export class Renderer {
     ctx.restore();
   }
 
-  #drawTarget(view, style, t) {
+  #drawTarget(view, style, t, baseR = this.#R) {
     const ctx = this.#ctx;
-    const R = this.#R * view.targetScale;
-    const x = this.#cx + view.driftX * this.#R;
-    const y = this.#cy + view.driftY * this.#R;
+    const R = baseR * view.targetScale;
+    const x = this.#cx + view.driftX * baseR;
+    const y = this.#cy + view.driftY * baseR;
 
     ctx.save();
     ctx.translate(x, y);
@@ -150,23 +153,65 @@ export class Renderer {
       }
     }
 
-    ctx.setLineDash([this.#R * 0.11, this.#R * 0.085]);
-    ctx.lineDashOffset = -t * this.#R * 0.06; // slow marching ants
-    ctx.lineWidth = Math.max(2.5, this.#R * 0.028);
+    ctx.setLineDash([baseR * 0.11, baseR * 0.085]);
+    ctx.lineDashOffset = -t * baseR * 0.06; // slow marching ants
+    ctx.lineWidth = Math.max(2.5, baseR * 0.028);
     ctx.lineCap = 'round';
     ctx.strokeStyle = style.outline;
     traceShape(ctx, view.shapeId, R, { blobSeed: view.blobSeed });
     ctx.stroke();
+
+    if (view.boss) this.#drawBossFace(view, style, R);
     ctx.restore();
   }
 
-  #drawPlayer(frame, style) {
+  // Angry brows + a little crown on the outline: the boss means business.
+  #drawBossFace(view, style, R) {
+    const ctx = this.#ctx;
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = style.outline;
+    ctx.fillStyle = style.outline;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(3, R * 0.045);
+
+    // eyebrows, slanted inward
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.38, -R * 0.34);
+    ctx.lineTo(-R * 0.14, -R * 0.22);
+    ctx.moveTo(R * 0.38, -R * 0.34);
+    ctx.lineTo(R * 0.14, -R * 0.22);
+    ctx.stroke();
+
+    // crown perched on top
+    const cw = R * 0.34;
+    const cy = -R * 1.06;
+    ctx.beginPath();
+    ctx.moveTo(-cw / 2, cy);
+    ctx.lineTo(-cw / 2, cy - R * 0.16);
+    ctx.lineTo(-cw / 6, cy - R * 0.06);
+    ctx.lineTo(0, cy - R * 0.2);
+    ctx.lineTo(cw / 6, cy - R * 0.06);
+    ctx.lineTo(cw / 2, cy - R * 0.16);
+    ctx.lineTo(cw / 2, cy);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  #drawPlayer(frame, style, baseR = this.#R) {
     const ctx = this.#ctx;
     const view = frame.view;
-    const r = this.#R * view.size;
-    const x = this.#cx + view.wobbleX * this.#R;
-    const y = this.#cy + view.wobbleY * this.#R;
+    const r = baseR * view.size;
+    const x = this.#cx + view.wobbleX * baseR;
+    const y = this.#cy + view.wobbleY * baseR;
     const fx = frame.fx ?? {};
+
+    // faint streaks flying with the wind while it pushes
+    if (view.wind && view.holding) {
+      const mag = Math.hypot(view.wind.x, view.wind.y);
+      if (mag > 0.008) this.#drawWindStreaks(view, x, y, baseR, frame.t);
+    }
 
     ctx.save();
     ctx.translate(x, y);
@@ -181,6 +226,28 @@ export class Renderer {
       blobSeed: view.blobSeed,
       intensity: frame.moodIntensity ?? 0,
     });
+    ctx.restore();
+  }
+
+  #drawWindStreaks(view, px, py, baseR, t) {
+    const ctx = this.#ctx;
+    const angle = Math.atan2(view.wind.y, view.wind.x);
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(angle);
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) {
+      const lane = (i - 2.5) * baseR * 0.22;
+      const phase = (t * 1.6 + i * 0.37) % 1;
+      const x = -baseR * (1.15 - phase * 0.9);
+      ctx.globalAlpha = 0.28 * Math.sin(phase * Math.PI);
+      ctx.beginPath();
+      ctx.moveTo(x, lane + Math.sin(t * 3 + i) * 3);
+      ctx.lineTo(x + baseR * 0.2, lane + Math.sin(t * 3 + i) * 3);
+      ctx.stroke();
+    }
     ctx.restore();
   }
 

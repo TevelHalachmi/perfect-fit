@@ -9,6 +9,8 @@ import {
   wobbleFreq,
   toleranceBands,
   popThreshold,
+  bossPopThreshold,
+  invertPopThreshold,
   driftRadius,
   rotateSpeed,
   pulseAmp,
@@ -18,33 +20,48 @@ import { createRng } from './rng.js';
 
 const TAU = Math.PI * 2;
 
-export function createRound({ level, shapeId, seed, upgrades = {} }) {
+export function createRound({ level, shapeId, seed, upgrades = {}, boss = false }) {
   const rng = createRng(seed);
+  const modifiers = modifiersFor(level, rng, boss ? T.boss.extraModifiers : 0);
+  const invert = modifiers.includes('invert');
+
+  // per-round randomized phases so no two rounds shake alike.
+  // NOTE: v2 draws (gust, windAngle) come strictly AFTER every v1 draw so
+  // old seeds keep their exact layouts — scripted tests depend on it.
+  const phases = {
+    wx1: rng() * TAU, wy1: rng() * TAU,
+    wx2: rng() * TAU, wy2: rng() * TAU,
+    dx: rng() * TAU, dy: rng() * TAU,
+    pulse: rng() * TAU,
+  };
+  const blobSeed = rng.int(1, 1 << 30); // irregular shapes: target & player must match
+  phases.gust = rng() * TAU;
+  const windAngle = rng() * TAU;
+
   return {
     level,
     shapeId,
     seed,
     upgrades,
-    modifiers: modifiersFor(level, rng),
+    boss,
+    modifiers,
     state: 'idle', // 'idle' | 'holding'
     time: 0, // since round start (drives target pulse/drift)
     holdTime: 0, // since hold start (drives growth/wobble/ghost)
-    size: T.startSize,
+    startSize: invert ? T.invert.startSize : T.startSize,
+    size: invert ? T.invert.startSize : T.startSize,
     targetScale: 1,
     wobbleX: 0,
     wobbleY: 0,
+    windX: 0,
+    windY: 0,
     driftX: 0,
     driftY: 0,
     angle: 0, // radians, shared by target and player
     ghostAlpha: 1,
-    // per-round randomized phases so no two rounds shake alike
-    phases: {
-      wx1: rng() * TAU, wy1: rng() * TAU,
-      wx2: rng() * TAU, wy2: rng() * TAU,
-      dx: rng() * TAU, dy: rng() * TAU,
-      pulse: rng() * TAU,
-    },
-    blobSeed: rng.int(1, 1 << 30), // irregular shapes: target & player must match
+    phases,
+    blobSeed,
+    windAngle,
   };
 }
 
@@ -56,9 +73,11 @@ export function startHold(round) {
 export function resetHold(round) {
   round.state = 'idle';
   round.holdTime = 0;
-  round.size = T.startSize;
+  round.size = round.startSize;
   round.wobbleX = 0;
   round.wobbleY = 0;
+  round.windX = 0;
+  round.windY = 0;
   round.ghostAlpha = 1;
 }
 
@@ -84,12 +103,24 @@ export function tickRound(round, dt) {
 
   round.holdTime += dt;
 
-  // Growth (optionally surging under OSCILLATE — always positive).
+  // Growth. Under INVERT it runs backwards (start big, shrink to fit);
+  // OSCILLATE's surge factor stays positive, so it never flips direction.
   let g = growthRate(level, upgrades.zen ?? 0);
+  if (modifiers.includes('invert')) g = -g * T.invert.growthMult;
   if (modifiers.includes('oscillate')) {
     g *= 1 + T.oscillate.depth * Math.sin(TAU * T.oscillate.freq * round.holdTime);
   }
   round.size += g * dt;
+
+  // Wind: a seeded lateral push that builds while you hold, plus gusts.
+  // Pure perception attack — judgment never reads position.
+  if (modifiers.includes('wind')) {
+    const mag =
+      T.wind.pushPerSec * Math.min(round.holdTime, T.wind.pushCapSeconds) +
+      T.wind.gustAmp * Math.sin(TAU * T.wind.gustFreq * round.holdTime + round.phases.gust);
+    round.windX = Math.cos(round.windAngle) * mag;
+    round.windY = Math.sin(round.windAngle) * mag;
+  }
 
   // Wobble: two detuned sines per axis, amplitude swells with size².
   const A = wobbleAmp(level, upgrades.steady ?? 0) * round.size * round.size;
@@ -106,7 +137,14 @@ export function tickRound(round, dt) {
     round.ghostAlpha = inFlash ? Math.max(fade, T.ghost.flashAlpha) : fade;
   }
 
-  if (currentRatio(round) > popThreshold(level)) return 'pop';
+  // Pop check. Inverted rounds start above the normal threshold, so the
+  // high-side check is replaced by a mirrored deflation limit.
+  const ratio = currentRatio(round);
+  if (round.modifiers.includes('invert')) {
+    if (ratio < invertPopThreshold(level, round.boss)) return 'pop';
+  } else if (ratio > (round.boss ? bossPopThreshold(level) : popThreshold(level))) {
+    return 'pop';
+  }
   return null;
 }
 
@@ -117,22 +155,33 @@ export function roundView(round) {
   const bands = toleranceBands(round.level, round.upgrades.forgive ?? 0);
   const ratio = currentRatio(round);
   const err = Math.abs(ratio - 1);
+  const invert = round.modifiers.includes('invert');
   return {
     level: round.level,
     shapeId: round.shapeId,
     modifiers: round.modifiers,
+    boss: round.boss,
     holding: round.state === 'holding',
     size: round.size,
+    startSize: round.startSize,
     targetScale: round.targetScale,
     ratio,
-    wobbleX: round.wobbleX,
-    wobbleY: round.wobbleY,
+    // wind folds into the wobble offsets so every consumer (renderer,
+    // burst positions, hum) follows the pushed shape for free
+    wobbleX: round.wobbleX + round.windX,
+    wobbleY: round.wobbleY + round.windY,
+    wind: { x: round.windX, y: round.windY },
     driftX: round.driftX,
     driftY: round.driftY,
     angle: round.angle,
     ghostAlpha: round.ghostAlpha,
     blobSeed: round.blobSeed,
-    bands: { perfect: bands.perfect, good: bands.good, pop: popThreshold(round.level) },
+    bands: {
+      perfect: bands.perfect,
+      good: bands.good,
+      pop: round.boss ? bossPopThreshold(round.level) : popThreshold(round.level),
+      invertPop: invert ? invertPopThreshold(round.level, round.boss) : null,
+    },
     inBand: err <= bands.perfect ? 'perfect' : err <= bands.good ? 'good' : null,
     holdTime: round.holdTime,
   };

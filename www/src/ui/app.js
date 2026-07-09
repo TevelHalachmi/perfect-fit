@@ -13,10 +13,13 @@ import { createTitleScreen } from './screens/title.js';
 import { createResultsScreen } from './screens/results.js';
 import { createShopScreen } from './screens/shop-ui.js';
 import { createSettingsScreen } from './screens/settings.js';
+import { createProgressScreen } from './screens/progress.js';
 import { showBanner, MODIFIER_BANNERS } from './banners.js';
 import { shapeById } from '../core/catalog.js';
+import { TUNING } from '../core/constants.js';
 
 const SIZE_TICKS = [0.5, 0.75, 0.9];
+const INVERT_TICKS = [1.25, 1.15, 1.05]; // shrinking: crossings go downward
 
 export class App {
   #core;
@@ -29,6 +32,7 @@ export class App {
   #haptics;
   #mode = 'title'; // canvas mode: 'title' | 'game'
   #lastResultSuccess = null;
+  #lastRunMode = 'normal'; // what RETRY restarts (zen retries zen)
   #shopReturnTo = 'title';
   #popHidden = false;
   #ticksCrossed = 0;
@@ -50,14 +54,22 @@ export class App {
       title: createTitleScreen(document.getElementById('screen-title'), {
         core,
         onPlay: () => this.startGame(),
+        onDaily: () => this.startDaily(),
+        onZen: () => this.startGame({ mode: 'zen' }),
         onShop: () => this.openShop('title'),
+        onProgress: () => this.openProgress('title'),
         onSettings: () => this.showScreen('settings'),
       }),
       results: createResultsScreen(document.getElementById('screen-results'), {
+        core,
         audio: this.#audio,
-        onRetry: () => this.startGame(),
+        onRetry: () => this.startGame({ mode: this.#lastRunMode }),
         onShop: () => this.openShop('results'),
         onHome: () => this.showTitle(),
+      }),
+      progress: createProgressScreen(document.getElementById('screen-progress'), {
+        core,
+        onBack: () => this.showScreen(this.#shopReturnTo),
       }),
       shop: createShopScreen(document.getElementById('screen-shop'), {
         core,
@@ -87,14 +99,16 @@ export class App {
   }
 
   // Player position on screen right now (bursts and popups spawn there).
+  // Mirrors the renderer's boss camera zoom so effects land on the sprite.
   #playerPos() {
     const m = this.#renderer.metrics;
     const view = this.#core.getRoundView();
     if (!view) return { x: m.cx, y: m.cy, r: m.R };
+    const R = m.R * (view.boss ? TUNING.boss.visualScale : 1);
     return {
-      x: m.cx + view.wobbleX * m.R,
-      y: m.cy + view.wobbleY * m.R,
-      r: m.R * view.size,
+      x: m.cx + view.wobbleX * R,
+      y: m.cy + view.wobbleY * R,
+      r: R * view.size,
     };
   }
 
@@ -165,9 +179,36 @@ export class App {
         this.#effects.floatText(taunt, x, y - pr - 30, { size: 26, color: '#ff6b6b', ttl: 1.2 });
       }
 
+      if (r.bossBeaten) {
+        const { x, y, r: pr } = this.#playerPos();
+        this.#audio.bossWin();
+        this.#effects.floatText(`💰 +${r.chestCoins}`, x, y - pr - 64, {
+          size: 28,
+          color: '#ffd166',
+          delay: 0.4,
+          ttl: 1.3,
+        });
+      }
+
       if (r.newModifier && MODIFIER_BANNERS[r.newModifier]) {
         showBanner(MODIFIER_BANNERS[r.newModifier], 'pink');
       }
+    });
+
+    events.on('round:boss', () => {
+      showBanner('⚔️ BOSS LEVEL!', 'red');
+      this.#audio.bossSting();
+      this.#effects.shake(4);
+    });
+
+    events.on('mission:complete', ({ name, reward }) => {
+      showBanner(`🎯 MISSION: ${name.toUpperCase()} +${reward}`, '');
+      this.#audio.buy();
+    });
+
+    events.on('achievement:unlock', ({ name, reward }) => {
+      showBanner(`🏅 ${name.toUpperCase()} +${reward}`, 'gold');
+      this.#audio.levelUp();
     });
 
     events.on('round:pop', () => {
@@ -197,6 +238,7 @@ export class App {
 
     events.on('run:end', (result) => {
       this.#audio.stopHum();
+      this.#audio.stopPad();
       this.#hud.hide();
       this.#screens.results.show(result);
     });
@@ -227,24 +269,46 @@ export class App {
   }
 
   showTitle() {
+    this.#audio.stopPad();
     this.#core.toTitle();
     this.#mode = 'title';
     this.#hud.hide();
     this.showScreen('title');
   }
 
-  startGame() {
+  startGame({ mode = 'normal' } = {}) {
+    if (mode === 'daily') {
+      this.startDaily();
+      return;
+    }
     this.showScreen(null);
     this.#mode = 'game';
     this.#lastResultSuccess = null;
+    this.#lastRunMode = mode;
     this.#popHidden = false;
-    this.#core.startRun();
+    this.#core.startRun({ mode });
+    if (mode === 'zen') this.#audio.startPad();
+    this.#hud.show();
+  }
+
+  startDaily() {
+    if (!this.#core.startDaily()) return; // locked — button state explains why
+    this.showScreen(null);
+    this.#mode = 'game';
+    this.#lastResultSuccess = null;
+    this.#lastRunMode = 'daily';
+    this.#popHidden = false;
     this.#hud.show();
   }
 
   openShop(returnTo) {
     this.#shopReturnTo = returnTo;
     this.showScreen('shop');
+  }
+
+  openProgress(returnTo) {
+    this.#shopReturnTo = returnTo;
+    this.showScreen('progress');
   }
 
   // ---------- loop ----------
@@ -288,10 +352,16 @@ export class App {
       const view = this.#core.getRoundView();
       if (state.phase === 'roundIdle') this.#popHidden = false;
 
+      this.#audio.updatePad();
       if (view?.holding) {
         const wobbleNorm = Math.min(1, (Math.abs(view.wobbleX) + Math.abs(view.wobbleY)) / 0.06);
         this.#audio.updateHum(view.size, wobbleNorm);
-        while (this.#ticksCrossed < SIZE_TICKS.length && view.size >= SIZE_TICKS[this.#ticksCrossed]) {
+        const inverted = view.modifiers.includes('invert');
+        const ticks = inverted ? INVERT_TICKS : SIZE_TICKS;
+        while (
+          this.#ticksCrossed < ticks.length &&
+          (inverted ? view.size <= ticks[this.#ticksCrossed] : view.size >= ticks[this.#ticksCrossed])
+        ) {
           this.#audio.sizeTick(this.#ticksCrossed);
           this.#haptics.tick();
           this.#ticksCrossed++;

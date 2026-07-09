@@ -16,13 +16,20 @@ export class AudioEngine {
   #master = null;
   #noiseBuffer = null;
   #hum = null; // { osc1, osc2, gain, filter, lfo, lfoGain }
+  #pad = null; // zen ambience: { gain } — persistent, gain-gated like the hum
+  #padOn = false;
   #voices = 0;
   #enabled = true;
   #humLevel = 0.11;
 
   setEnabled(on) {
     this.#enabled = on;
-    if (!on) this.stopHum();
+    if (!on) {
+      this.stopHum();
+      this.stopPad();
+    } else if (this.#padOn) {
+      this.startPad();
+    }
   }
 
   get enabled() {
@@ -177,6 +184,95 @@ export class AudioEngine {
     const t = this.#ctx.currentTime;
     this.#hum.gain.gain.cancelScheduledValues(t);
     this.#hum.gain.gain.setTargetAtTime(0, t, 0.02);
+  }
+
+  // ---------- zen ambient pad ----------
+
+  startPad() {
+    this.#padOn = true;
+    if (!this.#ready()) return; // will catch up on the next updatePad tick
+    if (!this.#pad) {
+      const ctx = this.#ctx;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 400;
+      for (const [freq, level] of [[110, 1], [110.7, 0.9], [165, 0.45]]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const g = ctx.createGain();
+        g.gain.value = level;
+        osc.connect(g).connect(lp);
+        osc.start();
+      }
+      // a slow breath in the volume
+      const lfo = ctx.createOscillator();
+      lfo.frequency.value = 0.05;
+      const lfoGain = ctx.createGain();
+      lfoGain.gain.value = 0.015;
+      lfo.connect(lfoGain).connect(gain.gain);
+      lfo.start();
+      lp.connect(gain).connect(this.#master);
+      this.#pad = { gain };
+    }
+    const t = this.#ctx.currentTime;
+    this.#pad.gain.gain.cancelScheduledValues(t);
+    this.#pad.gain.gain.setTargetAtTime(0.05, t, 0.8);
+  }
+
+  // Called each frame during zen so the pad survives late audio unlock.
+  updatePad() {
+    if (this.#padOn && !this.#pad && this.#ready()) this.startPad();
+  }
+
+  stopPad() {
+    this.#padOn = false;
+    if (!this.#pad || !this.#ctx) return;
+    const t = this.#ctx.currentTime;
+    this.#pad.gain.gain.cancelScheduledValues(t);
+    this.#pad.gain.gain.setTargetAtTime(0, t, 0.4);
+  }
+
+  // ---------- boss stings ----------
+
+  bossSting() {
+    this.#spawn((ctx, out) => {
+      const t = ctx.currentTime;
+      const growl = ctx.createOscillator();
+      growl.type = 'sawtooth';
+      growl.frequency.setValueAtTime(55, t);
+      growl.frequency.exponentialRampToValueAtTime(38, t + 0.6);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 260;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.5, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.7);
+      growl.connect(lp).connect(g).connect(out);
+      growl.start(t);
+      growl.stop(t + 0.75);
+      growl.onended = () => {
+        growl.disconnect();
+        lp.disconnect();
+        g.disconnect();
+      };
+      this.#noise(ctx, out, { at: t, dur: 0.25, gain: 0.4, band: 120 });
+      this.#osc(ctx, out, { type: 'square', freq: 110, at: t + 0.32, dur: 0.12, gain: 0.16 });
+      this.#osc(ctx, out, { type: 'square', freq: 110, at: t + 0.5, dur: 0.16, gain: 0.2 });
+    }, 0.9);
+  }
+
+  bossWin() {
+    this.#spawn((ctx, out) => {
+      const t = ctx.currentTime;
+      [392, 523.25, 783.99].forEach((freq, i) => {
+        this.#osc(ctx, out, { type: 'triangle', freq, at: t + i * 0.11, dur: 0.4, gain: 0.2, decay: 0.35 });
+      });
+      this.#osc(ctx, out, { type: 'sine', freq: 65, at: t, dur: 0.35, gain: 0.5, decay: 0.3 });
+      this.#noise(ctx, out, { at: t + 0.3, dur: 0.4, gain: 0.05, highpass: 6000 });
+    }, 0.9);
   }
 
   // ---------- one-shots ----------

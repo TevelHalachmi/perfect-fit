@@ -35,9 +35,13 @@ export class Economy {
   }
 
   // Reward for one judged release. Returns {total, breakdown}.
-  computeReward({ band, error, level, streak, upgrades = {} }) {
+  // `mult` is a mode multiplier (zen pays half); folded before the floor.
+  computeReward({ band, error, level, streak, upgrades = {}, mult = 1 }) {
     if (band !== BAND.PERFECT && band !== BAND.GOOD) {
-      return { total: 0, breakdown: { base: 0, bandMult: 0, closeBonus: 0, streakBonus: 0, midasMult: 1 } };
+      return {
+        total: 0,
+        breakdown: { base: 0, bandMult: 0, closeBonus: 0, streakBonus: 0, midasMult: 1, modeMult: mult },
+      };
     }
     const base = T.reward.base + Math.floor(T.reward.basePerLevel * level);
     const bandMult = band === BAND.PERFECT ? T.reward.perfectMult : 1;
@@ -51,8 +55,15 @@ export class Economy {
 
     const streakBonus = Math.floor(base * T.reward.streakBonusPer * Math.min(streak, T.reward.streakBonusCap));
     const midasMult = 1 + T.upgrades.midas.coinMultPerLevel * (upgrades.midas ?? 0);
-    const total = Math.floor((base * bandMult + closeBonus + streakBonus) * midasMult);
-    return { total, breakdown: { base, bandMult, closeBonus, streakBonus, midasMult } };
+    const total = Math.floor((base * bandMult + closeBonus + streakBonus) * midasMult * mult);
+    return { total, breakdown: { base, bandMult, closeBonus, streakBonus, midasMult, modeMult: mult } };
+  }
+
+  // The chest for beating a boss round — roughly five normal rounds.
+  computeBossChest(level, upgrades = {}) {
+    const base = T.reward.base + Math.floor(T.reward.basePerLevel * level);
+    const midasMult = 1 + T.upgrades.midas.coinMultPerLevel * (upgrades.midas ?? 0);
+    return Math.floor((base * T.boss.chestMult + T.boss.chestFlat) * midasMult);
   }
 }
 
