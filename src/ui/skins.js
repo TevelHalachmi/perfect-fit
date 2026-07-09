@@ -2,6 +2,8 @@
 // particle palette. Keyed by the catalog's skin ids (core owns ownership;
 // this file only owns looks).
 
+// `pattern` names a finish painted inside the shape body by draw-shape.js —
+// skins change texture and character, not just palette.
 export const SKIN_STYLES = {
   classic: {
     bg: ['#2c1c62', '#191036'],
@@ -13,6 +15,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(255,80,130,0.4)',
     particles: ['#ff5fa2', '#3ee6c1', '#ffd166', '#8f7bff', '#ffffff'],
     dots: 'rgba(255,255,255,0.20)',
+    pattern: null,
   },
   candy: {
     bg: ['#4b2a6e', '#2a1547'],
@@ -24,6 +27,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(255,110,170,0.45)',
     particles: ['#ff9ed2', '#a5f8e3', '#fff3a5', '#c9b6ff', '#ffffff'],
     dots: 'rgba(255,210,240,0.22)',
+    pattern: 'candy',
   },
   ocean: {
     bg: ['#0e2a52', '#081630'],
@@ -35,6 +39,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(60,190,255,0.4)',
     particles: ['#4cc9f0', '#80ffdb', '#48bfe3', '#5390d9', '#ffffff'],
     dots: 'rgba(140,220,255,0.20)',
+    pattern: 'waves',
   },
   neon: {
     bg: ['#0d0d17', '#050508'],
@@ -46,6 +51,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(0,255,170,0.35)',
     particles: ['#00ffc8', '#ff00e5', '#00b3ff', '#faff00', '#ffffff'],
     dots: 'rgba(0,255,200,0.18)',
+    pattern: 'scanlines',
   },
   sunset: {
     bg: ['#6d2a63', '#2b1140'],
@@ -57,6 +63,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(255,120,90,0.45)',
     particles: ['#ff8f5e', '#ffd166', '#ff5fa2', '#c77dff', '#ffffff'],
     dots: 'rgba(255,190,150,0.22)',
+    pattern: 'bands',
   },
   galaxy: {
     bg: ['#1b1b4d', '#0a0a24'],
@@ -68,6 +75,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(160,130,255,0.45)',
     particles: ['#8f7bff', '#4cc9f0', '#ff5fa2', '#ffffff', '#ffd166'],
     dots: 'rgba(255,255,255,0.35)',
+    pattern: 'nebula',
   },
   lava: {
     bg: ['#3d0f0f', '#1c0505'],
@@ -79,6 +87,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(255,90,40,0.45)',
     particles: ['#ff5e3a', '#ffd166', '#ff9e2c', '#ff2e00', '#ffe8c2'],
     dots: 'rgba(255,140,80,0.25)',
+    pattern: 'veins',
   },
   gold: {
     bg: ['#332410', '#171006'],
@@ -90,6 +99,7 @@ export const SKIN_STYLES = {
     blush: 'rgba(255,180,60,0.45)',
     particles: ['#ffd166', '#fff3c4', '#ffb703', '#ffffff', '#f4a900'],
     dots: 'rgba(255,220,140,0.28)',
+    pattern: 'sheen',
   },
 };
 

@@ -3,16 +3,21 @@
 // app applies to the core during celebrations.
 
 const TEXT_POOL = 14;
+const RING_POOL = 8;
 
 export class Effects {
   #shakeMag = 0;
   #shakeX = 0;
   #shakeY = 0;
   #flash = 0;
+  #danger = 0;
   #slowTimer = 0;
   #squashT = Infinity;
   #texts = Array.from({ length: TEXT_POOL }, () => ({
     active: false, text: '', x: 0, y: 0, vy: 0, life: 0, ttl: 1, size: 22, color: '#fff', delay: 0,
+  }));
+  #rings = Array.from({ length: RING_POOL }, () => ({
+    active: false, x: 0, y: 0, rMax: 100, life: 0, ttl: 0.5, color: '#fff', width: 6, delay: 0,
   }));
 
   get timeScale() {
@@ -25,6 +30,18 @@ export class Effects {
 
   flash(strength = 0.55) {
     this.#flash = Math.max(this.#flash, strength);
+  }
+
+  // Red edge vignette — the sting of failure.
+  danger(strength = 0.55) {
+    this.#danger = Math.max(this.#danger, strength);
+  }
+
+  // Expanding shockwave ring.
+  ring(x, y, rMax, color, { ttl = 0.55, width = 7, delay = 0 } = {}) {
+    const slot = this.#rings.find((r) => !r.active);
+    if (!slot) return;
+    Object.assign(slot, { active: true, x, y, rMax, life: 0, ttl, color, width, delay });
   }
 
   slowMo(seconds = 0.35) {
@@ -44,6 +61,16 @@ export class Effects {
   update(dt) {
     this.#slowTimer = Math.max(0, this.#slowTimer - dt);
     this.#flash = Math.max(0, this.#flash - dt * 3.2);
+    this.#danger = Math.max(0, this.#danger - dt * 1.6);
+    for (const r of this.#rings) {
+      if (!r.active) continue;
+      if (r.delay > 0) {
+        r.delay -= dt;
+        continue;
+      }
+      r.life += dt;
+      if (r.life >= r.ttl) r.active = false;
+    }
     this.#shakeMag = Math.max(0, this.#shakeMag - dt * 26);
     if (this.#shakeMag > 0.01) {
       this.#shakeX = (Math.random() * 2 - 1) * this.#shakeMag;
@@ -82,12 +109,26 @@ export class Effects {
       shakeX: this.#shakeX,
       shakeY: this.#shakeY,
       flash: this.#flash,
+      danger: this.#danger,
       squashX,
       squashY,
     };
   }
 
   drawTexts(ctx) {
+    for (const r of this.#rings) {
+      if (!r.active || r.delay > 0) continue;
+      const k = r.life / r.ttl;
+      const eased = 1 - Math.pow(1 - k, 2.2);
+      ctx.save();
+      ctx.globalAlpha = (1 - k) * 0.8;
+      ctx.strokeStyle = r.color;
+      ctx.lineWidth = r.width * (1 - k * 0.7);
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, Math.max(1, r.rMax * eased), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
     for (const t of this.#texts) {
       if (!t.active || t.delay > 0) continue;
       const k = t.life / t.ttl;

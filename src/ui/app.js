@@ -14,6 +14,7 @@ import { createResultsScreen } from './screens/results.js';
 import { createShopScreen } from './screens/shop-ui.js';
 import { createSettingsScreen } from './screens/settings.js';
 import { createProgressScreen } from './screens/progress.js';
+import { createLeaderboardScreen } from './screens/leaderboard.js';
 import { showBanner, MODIFIER_BANNERS } from './banners.js';
 import { shapeById } from '../core/catalog.js';
 import { TUNING } from '../core/constants.js';
@@ -36,13 +37,16 @@ export class App {
   #shopReturnTo = 'title';
   #popHidden = false;
   #ticksCrossed = 0;
+  #moteTimer = 0;
+  #zoom = 1;
   #last = 0;
 
-  constructor({ core, canvas }) {
+  constructor({ core, canvas, net = null }) {
     this.#core = core;
     this.#renderer = new Renderer(canvas);
     this.#audio = new AudioEngine();
     this.#audio.setEnabled(core.getState().settings.sound);
+    this.#audio.setMusicEnabled(core.getState().settings.music !== false);
     this.#effects = new Effects();
     this.#particles = new ParticleSystem();
     this.#haptics = createHaptics(core);
@@ -53,12 +57,22 @@ export class App {
     this.#screens = {
       title: createTitleScreen(document.getElementById('screen-title'), {
         core,
+        net,
         onPlay: () => this.startGame(),
         onDaily: () => this.startDaily(),
         onZen: () => this.startGame({ mode: 'zen' }),
         onShop: () => this.openShop('title'),
         onProgress: () => this.openProgress('title'),
         onSettings: () => this.showScreen('settings'),
+        onLeaderboard: () => {
+          this.#shopReturnTo = 'title';
+          this.showScreen('leaderboard');
+        },
+      }),
+      leaderboard: createLeaderboardScreen(document.getElementById('screen-leaderboard'), {
+        core,
+        net: net ?? { enabled: false, onStatus: () => () => {}, leaderboard: async () => null },
+        onBack: () => this.showScreen(this.#shopReturnTo),
       }),
       results: createResultsScreen(document.getElementById('screen-results'), {
         core,
@@ -133,6 +147,8 @@ export class App {
       if (r.success) {
         this.#effects.squash();
         const perfect = r.band === 'perfect';
+        this.#effects.ring(x, y, pr * 2.3, style.glow, { width: perfect ? 9 : 6 });
+        if (perfect) this.#effects.ring(x, y, pr * 3.1, '#ffffff', { ttl: 0.7, width: 4, delay: 0.07 });
         this.#particles.burst({
           x, y,
           colors: style.particles,
@@ -162,6 +178,7 @@ export class App {
         }
       } else if (r.band !== 'pop') {
         this.#effects.shake(7);
+        this.#effects.danger(0.5);
         this.#audio.fail();
         this.#haptics.fail();
         this.#particles.burst({
@@ -220,6 +237,7 @@ export class App {
       this.#haptics.pop();
       this.#effects.shake(12);
       this.#effects.flash(0.25);
+      this.#effects.danger(0.65);
       this.#effects.floatText('POP!', x, y - 20, { size: 34, color: '#ff6b6b', ttl: 1.1 });
       this.#particles.burst({
         x, y,
@@ -239,6 +257,7 @@ export class App {
     events.on('run:end', (result) => {
       this.#audio.stopHum();
       this.#audio.stopPad();
+      this.#audio.startMusic(); // the lullaby returns while you lick wounds
       this.#hud.hide();
       this.#screens.results.show(result);
     });
@@ -256,6 +275,18 @@ export class App {
 
     events.on('settings:change', ({ key, value }) => {
       if (key === 'sound') this.#audio.setEnabled(value);
+      if (key === 'music') this.#audio.setMusicEnabled(value);
+    });
+
+    events.on('level:change', ({ level }) => {
+      if (level > 1 && this.#mode === 'game') {
+        const m = this.#renderer.metrics;
+        this.#effects.floatText(`LEVEL ${level}`, m.cx, m.cy - m.R * 1.45, {
+          size: 22,
+          color: '#c9bfe8',
+          ttl: 0.9,
+        });
+      }
     });
   }
 
@@ -270,6 +301,7 @@ export class App {
 
   showTitle() {
     this.#audio.stopPad();
+    this.#audio.startMusic();
     this.#core.toTitle();
     this.#mode = 'title';
     this.#hud.hide();
@@ -286,6 +318,7 @@ export class App {
     this.#lastResultSuccess = null;
     this.#lastRunMode = mode;
     this.#popHidden = false;
+    this.#audio.stopMusic();
     this.#core.startRun({ mode });
     if (mode === 'zen') this.#audio.startPad();
     this.#hud.show();
@@ -298,6 +331,7 @@ export class App {
     this.#lastResultSuccess = null;
     this.#lastRunMode = 'daily';
     this.#popHidden = false;
+    this.#audio.stopMusic();
     this.#hud.show();
   }
 
@@ -353,6 +387,7 @@ export class App {
       if (state.phase === 'roundIdle') this.#popHidden = false;
 
       this.#audio.updatePad();
+      this.#audio.updateMusic();
       if (view?.holding) {
         const wobbleNorm = Math.min(1, (Math.abs(view.wobbleX) + Math.abs(view.wobbleY)) / 0.06);
         this.#audio.updateHum(view.size, wobbleNorm);
@@ -367,6 +402,31 @@ export class App {
           this.#ticksCrossed++;
         }
       }
+
+      // rising motes while holding; embers when the streak burns
+      this.#moteTimer -= dt;
+      const style = this.#skinStyle();
+      if (this.#moteTimer <= 0 && view && (view.holding || state.streak >= 5)) {
+        this.#moteTimer = view.holding ? 0.07 : 0.16;
+        const { x, y, r } = this.#playerPos();
+        this.#particles.burst({
+          x: x + (Math.random() - 0.5) * r * 1.6,
+          y: y + r * (0.55 + Math.random() * 0.3),
+          colors: state.streak >= 5 ? ['#ffd166', '#ff8f5e', style.glow] : [style.glow, '#ffffff'],
+          count: 1,
+          speed: [10, 34],
+          angle: -Math.PI / 2,
+          spread: 0.9,
+          gravity: -70,
+          ttl: [0.5, 1.0],
+          size: [2, 4.5],
+          kind: 'mote',
+        });
+      }
+
+      // camera eases in while you hold, back out when you let go
+      const zoomTarget = view?.holding ? 1 + 0.035 * Math.min(1, view.size) : 1;
+      this.#zoom += (zoomTarget - this.#zoom) * Math.min(1, dt * 7);
 
       const mood =
         state.phase === 'holding'
@@ -386,6 +446,8 @@ export class App {
         moodIntensity: view ? Math.max(0, Math.min(1, (view.ratio - 0.75) * 2.2)) : 0,
         t,
         fx: this.#effects.frame(),
+        breathe: state.phase === 'roundIdle',
+        zoom: this.#zoom,
         hidePlayer: this.#popHidden,
         particles: this.#particles,
         drawTexts: (ctx) => this.#effects.drawTexts(ctx),

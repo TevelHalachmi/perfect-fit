@@ -1,6 +1,9 @@
 // Title screen. The equipped shape bobs on the canvas behind this DOM.
 
-export function createTitleScreen(el, { onPlay, onDaily, onZen, onShop, onProgress, onSettings, core }) {
+export function createTitleScreen(
+  el,
+  { onPlay, onDaily, onZen, onShop, onProgress, onSettings, onLeaderboard, core, net }
+) {
   el.innerHTML = `
     <div class="title-best hidden" id="title-best"></div>
     <h1 class="title-logo">Perfect<br>Fit</h1>
@@ -16,6 +19,10 @@ export function createTitleScreen(el, { onPlay, onDaily, onZen, onShop, onProgre
       <button class="btn btn-ghost btn-small" id="btn-progress">📋 PROGRESS</button>
       <button class="btn btn-ghost btn-small" id="btn-settings">⚙️ SETTINGS</button>
     </div>
+    <div class="btn-row">
+      <button class="btn btn-violet btn-small hidden" id="btn-leaderboard">🏆 RANKS</button>
+    </div>
+    <div class="net-pill" id="net-pill">⚪ offline mode</div>
   `;
   el.querySelector('#btn-play').addEventListener('click', onPlay);
   el.querySelector('#btn-daily').addEventListener('click', onDaily);
@@ -23,6 +30,28 @@ export function createTitleScreen(el, { onPlay, onDaily, onZen, onShop, onProgre
   el.querySelector('#btn-shop').addEventListener('click', onShop);
   el.querySelector('#btn-progress').addEventListener('click', onProgress);
   el.querySelector('#btn-settings').addEventListener('click', onSettings);
+  el.querySelector('#btn-leaderboard').addEventListener('click', onLeaderboard);
+
+  function refreshNet() {
+    const pill = el.querySelector('#net-pill');
+    const lbBtn = el.querySelector('#btn-leaderboard');
+    if (!net?.enabled) {
+      pill.textContent = '⚪ offline mode';
+      lbBtn.classList.add('hidden');
+      return;
+    }
+    if (net.status === 'online') {
+      pill.textContent = `🟢 online · ${net.name ?? 'connected'}`;
+      lbBtn.classList.remove('hidden');
+    } else if (net.status === 'connecting') {
+      pill.textContent = '🟡 connecting…';
+      lbBtn.classList.add('hidden');
+    } else {
+      pill.textContent = '⚪ offline — will retry';
+      lbBtn.classList.add('hidden');
+    }
+  }
+  net?.onStatus(() => refreshNet());
 
   function refreshDaily() {
     const btn = el.querySelector('#btn-daily');
@@ -55,6 +84,7 @@ export function createTitleScreen(el, { onPlay, onDaily, onZen, onShop, onProgre
       bestEl.classList.toggle('hidden', best < 2);
       bestEl.textContent = `★ BEST LEVEL ${best} ★`;
       refreshDaily();
+      refreshNet();
       el.classList.remove('hidden');
     },
     hide() {

@@ -36,7 +36,7 @@ export class ParticleSystem {
       p.x = x;
       p.y = y;
       p.vx = Math.cos(a) * v;
-      p.vy = Math.sin(a) * v - (kind === 'confetti' ? 140 : 40); // pop upward a touch
+      p.vy = Math.sin(a) * v - (kind === 'confetti' ? 140 : kind === 'mote' ? 0 : 40);
       p.rot = Math.random() * Math.PI * 2;
       p.vrot = (Math.random() - 0.5) * 14;
       p.size = size[0] + Math.random() * (size[1] - size[0]);
@@ -44,7 +44,8 @@ export class ParticleSystem {
       p.ttl = ttl[0] + Math.random() * (ttl[1] - ttl[0]);
       p.life = 0;
       p.gravity = gravity;
-      p.kind = kind === 'confetti' ? (Math.random() < 0.4 ? 'dot' : 'rect') : 'shard';
+      p.kind =
+        kind === 'confetti' ? (Math.random() < 0.4 ? 'dot' : 'rect') : kind === 'mote' ? 'dot' : 'shard';
     }
     this.activeCount = this.pool.reduce((n, p) => n + (p.active ? 1 : 0), 0);
   }

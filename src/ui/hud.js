@@ -28,13 +28,23 @@ export function createHud(el, core, { onQuit } = {}) {
   };
 
   let mode = 'normal';
+  let prevLives = null;
 
   function renderHearts(lives, max) {
     if (mode === 'zen') {
       refs.hearts.textContent = '🧘 zen';
+      prevLives = null;
       return;
     }
-    refs.hearts.textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, max - lives));
+    refs.hearts.innerHTML = Array.from({ length: Math.max(0, max) }, (_, i) =>
+      `<span class="hh">${i < lives ? '❤️' : '🖤'}</span>`
+    ).join('');
+    // the heart you just lost cracks visibly
+    if (prevLives !== null && lives < prevLives && lives >= 0) {
+      const lost = refs.hearts.querySelectorAll('.hh')[lives];
+      lost?.classList.add('heart-pop');
+    }
+    prevLives = lives;
   }
 
   function renderStreak(streak) {
@@ -51,7 +61,13 @@ export function createHud(el, core, { onQuit } = {}) {
     renderStreak(s.streak);
   }
 
-  core.events.on('level:change', ({ level }) => (refs.level.textContent = String(level)));
+  core.events.on('level:change', ({ level }) => {
+    refs.level.textContent = String(level);
+    const pill = refs.level.parentElement;
+    pill.classList.remove('bump');
+    void pill.offsetWidth;
+    pill.classList.add('bump');
+  });
   core.events.on('lives:change', ({ lives, max }) => renderHearts(lives, max));
   core.events.on('coins:change', ({ coins }) => {
     refs.coinCount.textContent = String(coins);

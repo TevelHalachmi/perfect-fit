@@ -59,6 +59,12 @@ export class Renderer {
 
     ctx.save();
     if (fx.shakeX || fx.shakeY) ctx.translate(fx.shakeX ?? 0, fx.shakeY ?? 0);
+    // the world leans in as you hold — a subtle camera push
+    if (frame.zoom && frame.zoom !== 1) {
+      ctx.translate(this.#cx, this.#cy);
+      ctx.scale(frame.zoom, frame.zoom);
+      ctx.translate(-this.#cx, -this.#cy);
+    }
 
     if (frame.mode === 'title') {
       this.#drawTitleShape(frame, style);
@@ -74,6 +80,19 @@ export class Renderer {
     frame.particles?.draw(ctx);
     frame.drawTexts?.(ctx);
     ctx.restore();
+
+    if (fx.danger > 0) {
+      ctx.save();
+      const g = ctx.createRadialGradient(
+        this.#cx, this.#cy, Math.min(this.#w, this.#h) * 0.32,
+        this.#cx, this.#cy, Math.max(this.#w, this.#h) * 0.72
+      );
+      g.addColorStop(0, 'rgba(255,60,60,0)');
+      g.addColorStop(1, `rgba(255,50,60,${Math.min(0.55, fx.danger)})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, this.#w, this.#h);
+      ctx.restore();
+    }
 
     if (fx.flash > 0) {
       ctx.save();
@@ -217,6 +236,12 @@ export class Renderer {
     ctx.translate(x, y);
     ctx.rotate(view.angle);
     if (fx.squashX || fx.squashY) ctx.scale(fx.squashX ?? 1, fx.squashY ?? 1);
+    // gentle breathing while the round waits for you
+    if (frame.breathe) {
+      const b = 1 + 0.02 * Math.sin(frame.t * 2.4);
+      ctx.scale(b, 2 - b);
+      ctx.rotate(0.012 * Math.sin(frame.t * 1.7));
+    }
     drawShapeSprite(ctx, {
       shapeId: view.shapeId,
       r,
