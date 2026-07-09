@@ -1,6 +1,8 @@
 // In-game HUD (DOM): level, hearts, coins, streak. Subscribes to core
 // events; cheap textContent updates only.
 
+import { icon } from './icons.js';
+
 export function createHud(el, core, { onQuit } = {}) {
   el.innerHTML = `
     <div class="hud-col">
@@ -9,10 +11,10 @@ export function createHud(el, core, { onQuit } = {}) {
     </div>
     <div class="hud-col right">
       <div class="hud-row">
-        <div class="hud-pill" id="hud-coins"><span class="coin-icon"></span><span id="hud-coin-count">0</span></div>
+        <div class="hud-pill" id="hud-coins">${icon('coin')}<span id="hud-coin-count">0</span></div>
         <button class="hud-btn" id="hud-quit" aria-label="End run">✕</button>
       </div>
-      <div class="hud-pill hidden" id="hud-streak">🔥 <span id="hud-streak-count">0</span></div>
+      <div class="hud-pill hidden" id="hud-streak">${icon('fire')} <span id="hud-streak-count">0</span></div>
     </div>
   `;
   el.querySelector('#hud-quit').addEventListener('click', () => onQuit?.());
@@ -32,12 +34,12 @@ export function createHud(el, core, { onQuit } = {}) {
 
   function renderHearts(lives, max) {
     if (mode === 'zen') {
-      refs.hearts.textContent = '🧘 zen';
+      refs.hearts.innerHTML = `${icon('zen')} zen`;
       prevLives = null;
       return;
     }
     refs.hearts.innerHTML = Array.from({ length: Math.max(0, max) }, (_, i) =>
-      `<span class="hh">${i < lives ? '❤️' : '🖤'}</span>`
+      `<span class="hh">${icon(i < lives ? 'heart' : 'heart-black')}</span>`
     ).join('');
     // the heart you just lost cracks visibly
     if (prevLives !== null && lives < prevLives && lives >= 0) {

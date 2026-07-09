@@ -278,12 +278,12 @@ export class Renderer {
 
   #drawTitleShape(frame, style) {
     const ctx = this.#ctx;
-    const r = this.#R * 0.62;
+    const r = this.#R * 0.54;
     const bob = Math.sin(frame.t * 1.6) * this.#R * 0.05;
     const tilt = Math.sin(frame.t * 0.9) * 0.06;
 
     ctx.save();
-    ctx.translate(this.#cx, this.#cy + this.#R * 0.1 + bob);
+    ctx.translate(this.#cx, this.#cy - this.#R * 0.38 + bob);
     ctx.rotate(tilt);
     drawShapeSprite(ctx, { shapeId: frame.shapeId, r, style, mood: 'idle', t: frame.t, blobSeed: 7 });
     ctx.restore();
