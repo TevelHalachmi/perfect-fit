@@ -16,6 +16,7 @@ import { createSettingsScreen } from './screens/settings.js';
 import { createProgressScreen } from './screens/progress.js';
 import { createLeaderboardScreen } from './screens/leaderboard.js';
 import { showBanner, MODIFIER_BANNERS } from './banners.js';
+import { icon } from './icons.js';
 import { shapeById } from '../core/catalog.js';
 import { TUNING } from '../core/constants.js';
 
@@ -213,18 +214,18 @@ export class App {
     });
 
     events.on('round:boss', () => {
-      showBanner('⚔️ BOSS LEVEL!', 'red');
+      showBanner(`${icon('swords')} BOSS LEVEL!`, 'red');
       this.#audio.bossSting();
       this.#effects.shake(4);
     });
 
     events.on('mission:complete', ({ name, reward }) => {
-      showBanner(`🎯 MISSION: ${name.toUpperCase()} +${reward}`, '');
+      showBanner(`${icon('target')} MISSION: ${name.toUpperCase()} +${reward}`, '');
       this.#audio.buy();
     });
 
     events.on('achievement:unlock', ({ name, reward }) => {
-      showBanner(`🏅 ${name.toUpperCase()} +${reward}`, 'gold');
+      showBanner(`${icon('medal')} ${name.toUpperCase()} +${reward}`, 'gold');
       this.#audio.levelUp();
     });
 
@@ -269,7 +270,7 @@ export class App {
 
     events.on('shop:unlock', ({ id }) => {
       const shape = shapeById(id);
-      if (shape) showBanner(`✨ UNLOCKED: ${shape.name.toUpperCase()}!`, 'gold');
+      if (shape) showBanner(`${icon('sparkles')} UNLOCKED: ${shape.name.toUpperCase()}!`, 'gold');
       this.#audio.levelUp();
     });
 

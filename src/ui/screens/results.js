@@ -4,6 +4,7 @@
 
 import { renderShareCard, buildShareText, cardToBlob, shareResult, PLAY_URL } from '../share.js';
 import { showBanner } from '../banners.js';
+import { icon } from '../icons.js';
 
 const TAUNTS = [
   [2, 'The shapes believe in you. Barely.'],
@@ -23,15 +24,15 @@ export function createResultsScreen(el, { core, audio, onRetry, onShop, onHome }
       <div class="results-taunt" id="res-taunt"></div>
       <div class="stat-row" id="res-row-main"><span id="res-main-label">Level reached</span><span class="stat-value" id="res-level">1</span></div>
       <div class="stat-row highlight"><span>Coins earned</span><span class="stat-value" id="res-coins">0</span></div>
-      <div class="stat-row hidden" id="res-bonus-row"><span>🗓️ Daily streak bonus</span><span class="stat-value" id="res-bonus">0</span></div>
+      <div class="stat-row hidden" id="res-bonus-row"><span>${icon('calendar')} Daily streak bonus</span><span class="stat-value" id="res-bonus">0</span></div>
       <div class="stat-row"><span>Best streak</span><span class="stat-value" id="res-streak">0</span></div>
       <div class="btn-row" style="margin-top:6px">
         <button class="btn btn-mint" id="btn-retry">RETRY</button>
-        <button class="btn btn-violet" id="btn-share">📤 SHARE</button>
+        <button class="btn btn-violet" id="btn-share">${icon('share')} SHARE</button>
       </div>
       <div class="btn-row">
-        <button class="btn btn-violet btn-small" id="btn-res-shop">🛍️ SHOP</button>
-        <button class="btn btn-ghost btn-small" id="btn-res-home">🏠 HOME</button>
+        <button class="btn btn-violet btn-small" id="btn-res-shop">${icon('shop')} SHOP</button>
+        <button class="btn btn-ghost btn-small" id="btn-res-home">${icon('home')} HOME</button>
       </div>
     </div>
   `;
@@ -95,7 +96,7 @@ export function createResultsScreen(el, { core, audio, onRetry, onShop, onHome }
           : 'RUN OVER!';
       el.querySelector('#res-taunt').textContent = zen
         ? `${r.successes} shapes fitted. Deep breaths.`
-        : (daily && r.daily.streak >= 2 ? `🔥 ${r.daily.streak}-day streak! ` : '') +
+        : (daily && r.daily.streak >= 2 ? `${r.daily.streak}-day streak! ` : '') +
           TAUNTS.find(([max]) => r.levelReached < max)[1];
 
       el.querySelector('#res-main-label').textContent = 'Level reached';

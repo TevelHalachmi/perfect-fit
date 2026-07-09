@@ -138,7 +138,7 @@ export class Effects {
       ctx.globalAlpha = Math.max(0, alpha);
       ctx.translate(t.x, t.y);
       ctx.scale(popScale, popScale);
-      ctx.font = `900 ${t.size}px Nunito, "Segoe UI", system-ui, sans-serif`;
+      ctx.font = `800 ${t.size}px "Baloo 2", Nunito, "Segoe UI", system-ui, sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.lineWidth = Math.max(3, t.size * 0.16);

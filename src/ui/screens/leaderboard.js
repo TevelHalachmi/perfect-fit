@@ -1,6 +1,8 @@
 // Leaderboards (online only): today's daily challenge and all-time best
 // level. Rows come straight from the server; your own entry glows.
 
+import { icon } from '../icons.js';
+
 export function createLeaderboardScreen(el, { core, net, onBack }) {
   el.innerHTML = `
     <div class="shop-head">
@@ -44,7 +46,7 @@ export function createLeaderboardScreen(el, { core, net, onBack }) {
     body.innerHTML = rows
       .map((r, i) => {
         const you = net.name && r.name === net.name;
-        const medal = ['🥇', '🥈', '🥉'][i] ?? `${i + 1}.`;
+        const medal = i < 3 ? icon(`medal-${i + 1}`) : `${i + 1}.`;
         return `<div class="stat-row${you ? ' highlight' : ''}">
           <span>${medal} ${r.name}${you ? ' · YOU' : ''}</span>
           <span class="stat-value">LVL ${r.value}</span>

@@ -1,5 +1,7 @@
 // Settings: sound / haptics toggles and a double-confirm progress reset.
 
+import { icon } from '../icons.js';
+
 export function createSettingsScreen(el, { core, onBack }) {
   el.innerHTML = `
     <div class="shop-head">
@@ -8,14 +10,15 @@ export function createSettingsScreen(el, { core, onBack }) {
       <div style="width:86px"></div>
     </div>
     <div class="settings-list">
-      <label class="setting-row"><span>🔊 Sound</span><input type="checkbox" class="toggle" id="set-sound"></label>
-      <label class="setting-row"><span>🎵 Music</span><input type="checkbox" class="toggle" id="set-music"></label>
-      <label class="setting-row"><span>📳 Haptics</span><input type="checkbox" class="toggle" id="set-haptics"></label>
-      <div class="setting-row"><span>🗑️ Reset progress</span><button class="btn btn-ghost btn-small" id="set-reset">RESET</button></div>
+      <label class="setting-row"><span>${icon('sound')} Sound</span><input type="checkbox" class="toggle" id="set-sound"></label>
+      <label class="setting-row"><span>${icon('music')} Music</span><input type="checkbox" class="toggle" id="set-music"></label>
+      <label class="setting-row"><span>${icon('haptics')} Haptics</span><input type="checkbox" class="toggle" id="set-haptics"></label>
+      <div class="setting-row"><span>${icon('trash')} Reset progress</span><button class="btn btn-ghost btn-small" id="set-reset">RESET</button></div>
     </div>
     <div class="settings-note">
       Perfect Fit · progress is saved on this device only.
-      Sounds are synthesized live — nothing to download, nothing to load.
+      Sounds are synthesized live — nothing to download, nothing to load.<br>
+      Icons: Twemoji (CC-BY 4.0) · Font: Baloo 2 (OFL)
     </div>
   `;
 

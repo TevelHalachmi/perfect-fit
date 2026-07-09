@@ -1,5 +1,7 @@
 // Title screen. The equipped shape bobs on the canvas behind this DOM.
 
+import { icon } from '../icons.js';
+
 export function createTitleScreen(
   el,
   { onPlay, onDaily, onZen, onShop, onProgress, onSettings, onLeaderboard, core, net }
@@ -10,17 +12,17 @@ export function createTitleScreen(
     <div class="title-sub">hold to grow · release to fit</div>
     <div class="title-spacer"></div>
     <button class="btn" id="btn-play">PLAY</button>
-    <button class="btn btn-sun btn-small" id="btn-daily">🗓️ DAILY</button>
+    <button class="btn btn-sun btn-small" id="btn-daily">${icon('calendar')} DAILY</button>
     <div class="btn-row">
-      <button class="btn btn-mint btn-small" id="btn-zen">🧘 ZEN</button>
-      <button class="btn btn-violet btn-small" id="btn-shop">🛍️ SHOP</button>
+      <button class="btn btn-mint btn-small" id="btn-zen">${icon('zen')} ZEN</button>
+      <button class="btn btn-violet btn-small" id="btn-shop">${icon('shop')} SHOP</button>
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost btn-small" id="btn-progress">📋 PROGRESS</button>
-      <button class="btn btn-ghost btn-small" id="btn-settings">⚙️ SETTINGS</button>
+      <button class="btn btn-ghost btn-small" id="btn-progress">${icon('progress')} PROGRESS</button>
+      <button class="btn btn-ghost btn-small" id="btn-settings">${icon('gear')} SETTINGS</button>
     </div>
     <div class="btn-row">
-      <button class="btn btn-violet btn-small hidden" id="btn-leaderboard">🏆 RANKS</button>
+      <button class="btn btn-violet btn-small hidden" id="btn-leaderboard">${icon('trophy')} RANKS</button>
     </div>
     <div class="net-pill" id="net-pill">⚪ offline mode</div>
   `;
@@ -61,13 +63,13 @@ export function createTitleScreen(
       return;
     }
     btn.classList.remove('hidden');
-    const flame = daily.streak >= 2 ? ` · 🔥${daily.streak}` : '';
+    const flame = daily.streak >= 2 ? ` · ${icon('fire')}${daily.streak}` : '';
     if (daily.available) {
       btn.disabled = false;
-      btn.textContent = `🗓️ DAILY #${daily.dailyNumber}${flame}`;
+      btn.innerHTML = `${icon('calendar')} DAILY #${daily.dailyNumber}${flame}`;
     } else {
       btn.disabled = true;
-      btn.textContent = `✅ DAILY #${daily.dailyNumber} DONE${flame}`;
+      btn.innerHTML = `${icon('check')} DAILY #${daily.dailyNumber} DONE${flame}`;
     }
   }
 

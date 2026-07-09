@@ -47,7 +47,7 @@ export function renderShareCard({ result, state }) {
   ctx.globalAlpha = 1;
 
   const font = (size, weight = 900) =>
-    `${weight} ${size}px Nunito, "Segoe UI", system-ui, sans-serif`;
+    `${weight} ${size}px "Baloo 2", Nunito, "Segoe UI", system-ui, sans-serif`;
   ctx.textAlign = 'center';
 
   // headline

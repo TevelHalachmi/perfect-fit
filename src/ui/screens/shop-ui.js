@@ -4,6 +4,7 @@
 
 import { drawShapeSprite } from '../draw-shape.js';
 import { getSkinStyle } from '../skins.js';
+import { icon, glyph as glyphIcon } from '../icons.js';
 
 const PREVIEW_SIZE = 84;
 const PREVIEW_DPR = 2;
@@ -13,7 +14,7 @@ export function createShopScreen(el, { core, audio, onBack }) {
     <div class="shop-head">
       <button class="btn btn-ghost btn-small" id="shop-back">← BACK</button>
       <div class="shop-title">SHOP</div>
-      <div class="hud-pill"><span class="coin-icon"></span><span id="shop-coins">0</span></div>
+      <div class="hud-pill">${icon('coin')}<span id="shop-coins">0</span></div>
     </div>
     <div class="shop-tabs">
       <button class="tab-btn active" data-tab="shapes">SHAPES</button>
@@ -73,14 +74,14 @@ export function createShopScreen(el, { core, audio, onBack }) {
     if (item.owned)
       return `<button class="card-btn" data-action="equip" data-id="${item.id}">EQUIP</button>`;
     if (item.price == null)
-      return `<button class="card-btn milestone" disabled>🔒 ${item.lockText}</button>`;
+      return `<button class="card-btn milestone" disabled>${icon('lock')} ${item.lockText}</button>`;
     return priceButton(item);
   }
 
   function priceButton(item) {
     const cls = item.canBuy.ok ? '' : ' cant-afford';
     return `<button class="card-btn${cls}" data-action="buy" data-id="${item.id}">
-      <span class="coin-icon"></span>${item.price}</button>`;
+      ${icon('coin')}${item.price}</button>`;
   }
 
   function render() {
@@ -91,7 +92,7 @@ export function createShopScreen(el, { core, audio, onBack }) {
       .map((item) => {
         const preview =
           item.kind === 'upgrade'
-            ? `<div class="card-emoji">${item.icon}</div>`
+            ? `<div class="card-emoji">${glyphIcon(item.icon)}</div>`
             : `<canvas data-preview="${item.id}" width="${PREVIEW_SIZE * PREVIEW_DPR}" height="${PREVIEW_SIZE * PREVIEW_DPR}"></canvas>`;
         const pips =
           item.kind === 'upgrade'
