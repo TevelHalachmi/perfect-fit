@@ -33,6 +33,31 @@ export function popThreshold(level) {
   return clampMin(T.popThreshold.base - T.popThreshold.perLevel * (level - 1), T.popThreshold.min);
 }
 
+// Boss rounds pop a little sooner — but never inside anyone's GOOD band,
+// even with Forgiveness maxed. The floor keeps that true by construction.
+export function bossPopThreshold(level) {
+  const tightened = 1 + (popThreshold(level) - 1) * T.boss.popMarginMult;
+  const maxForgive = T.upgrades.forgive.maxLevel;
+  const floor = 1 + toleranceBands(level, maxForgive).good + T.boss.popFloorAboveGood;
+  return Math.max(tightened, floor);
+}
+
+// Under INVERT the shape shrinks; deflating past this ratio pops it.
+// Mirrored around 1.0 from the (possibly boss-tightened) high threshold.
+export function invertPopThreshold(level, boss = false) {
+  return 2 - (boss ? bossPopThreshold(level) : popThreshold(level));
+}
+
+export function isBossLevel(level) {
+  return level >= T.boss.every && level % T.boss.every === 0;
+}
+
+// Zen ramps at half speed by remapping the displayed level onto the same
+// curve — every existing difficulty invariant covers zen for free.
+export function zenEffectiveLevel(level) {
+  return 1 + Math.floor((level - 1) * T.zen.curveScale);
+}
+
 export function driftRadius(level) {
   if (level < T.drift.startLevel) return 0;
   const ramp = clampMax((level - T.drift.startLevel + 1) / T.drift.rampLevels, 1);
@@ -53,7 +78,8 @@ export function pulseAmp(level) {
 
 // Which modifiers are active this round. Deterministic given (level, rng).
 // The modifier that unlocks AT this level is always featured (intro banner).
-export function modifiersFor(level, rng) {
+// `extra` lets boss rounds stack one more on top, capped for readability.
+export function modifiersFor(level, rng, extra = 0) {
   const unlocked = Object.entries(T.modifierLevels)
     .filter(([, lv]) => level >= lv)
     .map(([name]) => name);
@@ -66,7 +92,7 @@ export function modifiersFor(level, rng) {
       break;
     }
   }
-  count = Math.min(count, unlocked.length);
+  count = Math.min(count + extra, unlocked.length, T.boss.maxModifiers);
   if (count === 0) return [];
 
   const introduced = Object.entries(T.modifierLevels).find(([, lv]) => lv === level)?.[0];

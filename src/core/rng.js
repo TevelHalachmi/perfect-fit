@@ -17,3 +17,14 @@ export function createRng(seed) {
   next.fork = () => createRng(Math.floor(next() * 4294967296));
   return next;
 }
+
+// FNV-1a over a string → uint32. Used to derive seeds from stable keys
+// (daily date keys, mission rotation) so they're identical on every device.
+export function hashStr32(str) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h >>> 0;
+}

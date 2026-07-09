@@ -2,7 +2,7 @@
 // offline and installs as a PWA. Registered on plain web only — never
 // inside the Capacitor shell (native apps ship their own files).
 
-const CACHE = 'perfect-fit-v1';
+const CACHE = 'perfect-fit-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -23,6 +23,9 @@ const ASSETS = [
   './src/core/shop.js',
   './src/core/save.js',
   './src/core/game-core.js',
+  './src/core/daily.js',
+  './src/core/missions.js',
+  './src/core/achievements.js',
   './src/ui/app.js',
   './src/ui/renderer.js',
   './src/ui/shapes.js',
@@ -37,10 +40,12 @@ const ASSETS = [
   './src/ui/hud.js',
   './src/ui/storage.js',
   './src/ui/banners.js',
+  './src/ui/share.js',
   './src/ui/screens/title.js',
   './src/ui/screens/results.js',
   './src/ui/screens/shop-ui.js',
   './src/ui/screens/settings.js',
+  './src/ui/screens/progress.js',
 ];
 
 self.addEventListener('install', (event) => {

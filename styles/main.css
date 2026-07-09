@@ -283,7 +283,9 @@ body {
   gap: 12px;
   margin-top: 4px;
 }
-.shop-title { font-size: 26px; font-weight: 900; letter-spacing: 0.02em; }
+.shop-title { font-size: clamp(19px, 5.5vw, 26px); font-weight: 900; letter-spacing: 0.02em; }
+.shop-head .hud-pill { flex-shrink: 0; }
+.shop-head .btn { flex-shrink: 0; }
 
 .shop-tabs {
   display: flex;
@@ -392,6 +394,63 @@ body {
 }
 .pip.filled { background: linear-gradient(180deg, var(--mint), var(--mint-deep)); border-color: transparent; }
 
+/* ---------- progress (missions / badges / stats) ---------- */
+
+.mission-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.mission-row {
+  background: var(--card);
+  border: 2px solid var(--card-edge);
+  border-radius: var(--radius-m);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  text-align: left;
+}
+.mission-row.done { border-color: var(--mint); opacity: 0.85; }
+
+.mission-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.mission-name { font-weight: 900; font-size: 15px; }
+.mission-reward {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-weight: 900; font-size: 13px; color: var(--sun);
+}
+.mission-row.done .mission-reward { color: var(--mint); }
+
+.mission-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--panel-soft);
+  overflow: hidden;
+}
+.mission-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--mint), var(--mint-deep));
+  transition: width 0.4s cubic-bezier(0.2, 1.2, 0.4, 1);
+}
+
+.mission-count {
+  font-weight: 800;
+  font-size: 11px;
+  color: var(--ink-dim);
+  letter-spacing: 0.08em;
+  text-align: right;
+}
+
 /* ---------- settings ---------- */
 
 .settings-list {
@@ -468,6 +527,7 @@ body {
 }
 .banner.gold { background: linear-gradient(180deg, var(--sun), var(--sun-deep)); color: #4a3403; }
 .banner.pink { background: linear-gradient(180deg, var(--accent), var(--accent-deep)); }
+.banner.red { background: linear-gradient(180deg, #ff6b6b, #d63a3a); }
 
 @keyframes banner-in {
   0% { transform: translateY(-30px) scale(0.7); opacity: 0; }

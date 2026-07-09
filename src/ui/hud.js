@@ -27,7 +27,13 @@ export function createHud(el, core, { onQuit } = {}) {
     streakCount: $('hud-streak-count'),
   };
 
+  let mode = 'normal';
+
   function renderHearts(lives, max) {
+    if (mode === 'zen') {
+      refs.hearts.textContent = '🧘 zen';
+      return;
+    }
     refs.hearts.textContent = '❤️'.repeat(Math.max(0, lives)) + '🖤'.repeat(Math.max(0, max - lives));
   }
 
@@ -54,7 +60,10 @@ export function createHud(el, core, { onQuit } = {}) {
     refs.coins.classList.add('bump');
   });
   core.events.on('round:result', ({ streak }) => renderStreak(streak));
-  core.events.on('run:start', refresh);
+  core.events.on('run:start', ({ mode: m }) => {
+    mode = m ?? 'normal';
+    refresh();
+  });
 
   return {
     el,
