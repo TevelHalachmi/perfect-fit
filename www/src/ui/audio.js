@@ -18,6 +18,9 @@ export class AudioEngine {
   #hum = null; // { osc1, osc2, gain, filter, lfo, lfoGain }
   #pad = null; // zen ambience: { gain } — persistent, gain-gated like the hum
   #padOn = false;
+  #music = null; // menu soundtrack: { gain, timer, bar, nextBarAt }
+  #musicOn = false;
+  #musicEnabled = true; // the settings.music toggle
   #voices = 0;
   #enabled = true;
   #humLevel = 0.11;
@@ -27,9 +30,17 @@ export class AudioEngine {
     if (!on) {
       this.stopHum();
       this.stopPad();
-    } else if (this.#padOn) {
-      this.startPad();
+      this.#haltMusic();
+    } else {
+      if (this.#padOn) this.startPad();
+      if (this.#musicOn) this.startMusic();
     }
+  }
+
+  setMusicEnabled(on) {
+    this.#musicEnabled = on;
+    if (!on) this.#haltMusic();
+    else if (this.#musicOn) this.startMusic();
   }
 
   get enabled() {
@@ -233,6 +244,108 @@ export class AudioEngine {
     const t = this.#ctx.currentTime;
     this.#pad.gain.gain.cancelScheduledValues(t);
     this.#pad.gain.gain.setTargetAtTime(0, t, 0.4);
+  }
+
+  // ---------- menu soundtrack ----------
+  // A tiny generative lullaby: a four-chord loop (C · Am · F · G) of soft
+  // triangle pads with two pentatonic plucks per bar, scheduled on the audio
+  // clock a bar ahead. Nothing is stored — every note stops and disconnects.
+
+  startMusic() {
+    this.#musicOn = true;
+    if (!this.#ready() || !this.#musicEnabled) return; // updateMusic catches up
+    if (this.#music) return;
+    const ctx = this.#ctx;
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    gain.connect(this.#master);
+    gain.gain.setTargetAtTime(1, ctx.currentTime, 1.2);
+    const music = { gain, bar: 0, nextBarAt: ctx.currentTime + 0.15, timer: 0 };
+    music.timer = setInterval(() => this.#scheduleBars(), 240);
+    this.#music = music;
+    this.#scheduleBars();
+  }
+
+  stopMusic() {
+    this.#musicOn = false;
+    this.#haltMusic();
+  }
+
+  // Fade out and dismantle (scheduled notes ring out naturally).
+  #haltMusic() {
+    if (!this.#music) return;
+    clearInterval(this.#music.timer);
+    const g = this.#music.gain;
+    const t = this.#ctx.currentTime;
+    g.gain.cancelScheduledValues(t);
+    g.gain.setTargetAtTime(0, t, 0.35);
+    setTimeout(() => g.disconnect(), 2500);
+    this.#music = null;
+  }
+
+  updateMusic() {
+    if (this.#musicOn && this.#musicEnabled && !this.#music && this.#ready()) this.startMusic();
+  }
+
+  #scheduleBars() {
+    const m = this.#music;
+    if (!m || !this.#ctx) return;
+    const ctx = this.#ctx;
+    const BAR = 2.4;
+    // keep one bar scheduled ahead
+    while (m.nextBarAt < ctx.currentTime + BAR) {
+      const at = Math.max(m.nextBarAt, ctx.currentTime + 0.05);
+      this.#playBar(at, m.bar, m.gain, BAR);
+      m.nextBarAt = at + BAR;
+      m.bar += 1;
+    }
+  }
+
+  #playBar(at, bar, out, BAR) {
+    const ctx = this.#ctx;
+    const CHORDS = [
+      [261.63, 329.63, 392.0], // C
+      [220.0, 261.63, 329.63], // Am
+      [174.61, 220.0, 349.23], // F
+      [196.0, 246.94, 392.0], // G
+    ];
+    const chord = CHORDS[bar % 4];
+    for (const freq of chord) {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = freq / 2; // an octave down: warm, not busy
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.022, at + 0.8);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + BAR + 0.6);
+      osc.connect(g).connect(out);
+      osc.start(at);
+      osc.stop(at + BAR + 0.8);
+      osc.onended = () => {
+        osc.disconnect();
+        g.disconnect();
+      };
+    }
+    // two gentle plucks, melody woven from the bar number (deterministic)
+    const PENTA = [523.25, 587.33, 659.25, 783.99, 880.0];
+    const picks = [(bar * 7 + 3) % 5, (bar * 3 + 1) % 5];
+    picks.forEach((idx, i) => {
+      const when = at + (i === 0 ? 0.15 : BAR * 0.55);
+      if (bar % 4 === 3 && i === 1) return; // leave a breath at the loop turn
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = PENTA[idx];
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.05, when);
+      g.gain.exponentialRampToValueAtTime(0.0001, when + 0.7);
+      osc.connect(g).connect(out);
+      osc.start(when);
+      osc.stop(when + 0.75);
+      osc.onended = () => {
+        osc.disconnect();
+        g.disconnect();
+      };
+    });
   }
 
   // ---------- boss stings ----------

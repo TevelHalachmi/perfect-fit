@@ -5,6 +5,8 @@ import { GameCore } from './core/game-core.js';
 import { createStorage } from './ui/storage.js';
 import { App } from './ui/app.js';
 import { renderShareCard } from './ui/share.js';
+import { SyncManager } from './net/sync.js';
+import { SERVER_URL } from './net/config.js';
 
 const params = new URLSearchParams(location.search);
 const testMode = params.get('test') === '1';
@@ -23,9 +25,17 @@ function localDateKey() {
 const getDateKey = () =>
   testMode && params.has('date') ? params.get('date') : localDateKey();
 
-const core = new GameCore({ storage: createStorage(), seed, getDateKey });
-const app = new App({ core, canvas: document.getElementById('game') });
+const storage = createStorage();
+const core = new GameCore({ storage, seed, getDateKey, getNow: () => Date.now() });
+
+// Online play: use the configured server, or a test-only ?server override.
+const serverUrl =
+  testMode && params.has('server') ? params.get('server') : SERVER_URL;
+const net = new SyncManager({ core, storage, serverUrl });
+
+const app = new App({ core, canvas: document.getElementById('game'), net });
 app.start();
+net.boot(); // resolves to online or offline on its own; the game never waits
 
 // Offline/PWA support on the plain web only. Never register inside the
 // Capacitor shell (native apps ship their own files) and never during
@@ -62,6 +72,13 @@ if (testMode) {
     getMissions: () => core.getMissions(),
     getAchievements: () => core.getAchievements(),
     getStats: () => core.getStats(),
+    getNet: () => ({
+      enabled: net.enabled,
+      status: net.status,
+      name: net.name,
+      pending: core.getJournal().length,
+      lastSync: net.lastSync,
+    }),
     // returns a PNG data URL so the e2e can size-check and save the card
     makeShareCard: () => {
       const result = lastRunEnd ?? { mode: 'normal', levelReached: 7, bestStreak: 5, runCoins: 88, bestAccuracy: 98.2 };

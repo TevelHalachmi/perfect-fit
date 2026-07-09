@@ -18,19 +18,19 @@ export class Economy {
     return this.#coins;
   }
 
-  earn(amount, reason = '') {
+  earn(amount, reason = '', meta = null) {
     const value = sanitize(amount);
     if (value <= 0) return 0;
     this.#coins += value;
-    this.#events?.emit('coins:change', { coins: this.#coins, delta: value, reason });
+    this.#events?.emit('coins:change', { coins: this.#coins, delta: value, reason, meta });
     return value;
   }
 
-  spend(amount, reason = '') {
+  spend(amount, reason = '', meta = null) {
     const value = sanitize(amount);
     if (value <= 0 || value > this.#coins) return false;
     this.#coins -= value;
-    this.#events?.emit('coins:change', { coins: this.#coins, delta: -value, reason });
+    this.#events?.emit('coins:change', { coins: this.#coins, delta: -value, reason, meta });
     return true;
   }
 

@@ -26,7 +26,7 @@ export function defaultData() {
     equippedShape: FREE_SHAPES[0],
     equippedSkin: FREE_SKINS[0],
     upgrades: { steady: 0, zen: 0, forgive: 0, midas: 0, life: 0 },
-    settings: { sound: true, haptics: true },
+    settings: { sound: true, haptics: true, music: true },
     daily: {
       lastPlayedKey: '',
       streak: 0,
@@ -37,6 +37,10 @@ export function defaultData() {
     },
     missions: { dateKey: '', list: [] },
     achievements: [],
+    // Coin ledger awaiting server approval (offline reconciliation). Every
+    // coins:change appends here; a successful sync trims approved entries.
+    journal: [],
+    journalSeq: 0,
     stats: {
       rounds: 0,
       perfects: 0,
@@ -179,6 +183,7 @@ export function repair(data) {
 
   d.settings.sound = src.settings?.sound !== false;
   d.settings.haptics = src.settings?.haptics !== false;
+  d.settings.music = src.settings?.music !== false;
 
   // --- v2 fields (absent in v1 saves → defaults) ---
   const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
@@ -211,6 +216,25 @@ export function repair(data) {
   d.achievements = [...new Set(Array.isArray(src.achievements) ? src.achievements : [])].filter(
     (id) => typeof id === 'string' && achievementById(id)
   );
+
+  d.journalSeq = int(src.journalSeq);
+  d.journal = (Array.isArray(src.journal) ? src.journal : [])
+    .filter(
+      (e) =>
+        e &&
+        typeof e === 'object' &&
+        Number.isFinite(Number(e.seq)) &&
+        Number.isFinite(Number(e.d)) &&
+        typeof e.r === 'string'
+    )
+    .slice(-500)
+    .map((e) => ({
+      seq: Math.floor(Number(e.seq)),
+      t: Math.max(0, Math.floor(Number(e.t) || 0)),
+      d: Math.trunc(Number(e.d)),
+      r: e.r,
+      ...(e.m && typeof e.m === 'object' && !Array.isArray(e.m) ? { m: e.m } : {}),
+    }));
 
   for (const key of Object.keys(d.stats)) {
     d.stats[key] = int(src.stats?.[key]);

@@ -9,6 +9,7 @@ export function createSettingsScreen(el, { core, onBack }) {
     </div>
     <div class="settings-list">
       <label class="setting-row"><span>🔊 Sound</span><input type="checkbox" class="toggle" id="set-sound"></label>
+      <label class="setting-row"><span>🎵 Music</span><input type="checkbox" class="toggle" id="set-music"></label>
       <label class="setting-row"><span>📳 Haptics</span><input type="checkbox" class="toggle" id="set-haptics"></label>
       <div class="setting-row"><span>🗑️ Reset progress</span><button class="btn btn-ghost btn-small" id="set-reset">RESET</button></div>
     </div>
@@ -19,10 +20,12 @@ export function createSettingsScreen(el, { core, onBack }) {
   `;
 
   const soundEl = el.querySelector('#set-sound');
+  const musicEl = el.querySelector('#set-music');
   const hapticsEl = el.querySelector('#set-haptics');
   const resetBtn = el.querySelector('#set-reset');
 
   soundEl.addEventListener('change', () => core.setSetting('sound', soundEl.checked));
+  musicEl.addEventListener('change', () => core.setSetting('music', musicEl.checked));
   hapticsEl.addEventListener('change', () => core.setSetting('haptics', hapticsEl.checked));
 
   let armed = false;
@@ -49,6 +52,7 @@ export function createSettingsScreen(el, { core, onBack }) {
     show() {
       const s = core.getState().settings;
       soundEl.checked = s.sound;
+      musicEl.checked = s.music !== false;
       hapticsEl.checked = s.haptics;
       el.classList.remove('hidden');
     },

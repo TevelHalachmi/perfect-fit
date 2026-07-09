@@ -76,6 +76,13 @@ body {
   padding: calc(16px + var(--sat)) calc(16px + var(--sar)) calc(16px + var(--sab)) calc(16px + var(--sal));
   text-align: center;
   z-index: 20;
+  /* every screen glides in when shown (display flip restarts the animation) */
+  animation: screen-in 0.34s cubic-bezier(0.2, 1.1, 0.4, 1);
+}
+
+@keyframes screen-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .screen.panel {
@@ -176,6 +183,13 @@ body {
 .hud-label { font-size: 11px; font-weight: 800; color: var(--ink-dim); letter-spacing: 0.14em; }
 
 #hud-hearts { font-size: 15px; letter-spacing: 2px; }
+#hud-hearts .hh { display: inline-block; }
+#hud-hearts .heart-pop { animation: heart-pop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1); }
+@keyframes heart-pop {
+  0% { transform: scale(1.7) rotate(-14deg); filter: brightness(2); }
+  40% { transform: scale(0.8) rotate(10deg); }
+  100% { transform: scale(1) rotate(0); }
+}
 #hud-streak { color: var(--sun); }
 #hud-streak.on-fire { animation: flame-pulse 0.5s ease-in-out infinite alternate; }
 
@@ -192,6 +206,7 @@ body {
 }
 
 #hud-coins.bump { animation: coin-bump 0.35s cubic-bezier(0.2, 2.2, 0.4, 1); }
+.hud-pill.bump { animation: coin-bump 0.35s cubic-bezier(0.2, 2.2, 0.4, 1); }
 @keyframes coin-bump { 50% { transform: scale(1.22); } }
 
 /* ---------- title screen ---------- */
@@ -225,6 +240,16 @@ body {
   font-weight: 800;
   color: var(--ink-dim);
   letter-spacing: 0.12em;
+}
+
+.net-pill {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--ink-dim);
+  background: var(--panel-soft);
+  border-radius: 999px;
+  padding: 5px 14px;
 }
 
 /* ---------- results screen ---------- */
@@ -343,7 +368,23 @@ body {
   gap: 8px;
   position: relative;
   transition: transform 0.08s ease;
+  animation: card-in 0.4s cubic-bezier(0.2, 1.3, 0.4, 1) both;
 }
+.shop-card:nth-child(2) { animation-delay: 0.04s; }
+.shop-card:nth-child(3) { animation-delay: 0.08s; }
+.shop-card:nth-child(4) { animation-delay: 0.12s; }
+.shop-card:nth-child(5) { animation-delay: 0.16s; }
+.shop-card:nth-child(6) { animation-delay: 0.2s; }
+.shop-card:nth-child(n + 7) { animation-delay: 0.24s; }
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.mission-row { animation: card-in 0.4s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.mission-row:nth-child(2) { animation-delay: 0.06s; }
+.mission-row:nth-child(3) { animation-delay: 0.12s; }
 .shop-card.purchasable:active { transform: scale(0.97); }
 .shop-card.equipped { border-color: var(--mint); box-shadow: 0 0 0 2px rgba(62, 230, 193, 0.35), 0 0 18px rgba(62, 230, 193, 0.25); }
 .shop-card.locked { opacity: 0.85; }

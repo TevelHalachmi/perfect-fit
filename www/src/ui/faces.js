@@ -31,9 +31,14 @@ export function drawFace(ctx, shapeId, r, style, mood, t, anchor, intensity = 0)
 
   if (mood === 'idle') {
     const blinking = t % 3.4 > 3.26;
+    const winking = !blinking && t % 7.3 > 7.08; // a cheeky wink now and then
     if (blinking) {
       eyeLine(ctx, -ex, ey, er);
       eyeLine(ctx, ex, ey, er);
+    } else if (winking) {
+      ctx.lineWidth = Math.max(1.5, er * 0.6);
+      happyEye(ctx, -ex, ey, er);
+      eyeDot(ctx, ex, ey, er);
     } else {
       eyeDot(ctx, -ex, ey, er);
       eyeDot(ctx, ex, ey, er);

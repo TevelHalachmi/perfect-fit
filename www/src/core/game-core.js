@@ -24,24 +24,41 @@ export class GameCore {
   #resolveTimer = 0;
   #pendingEnd = false;
 
-  constructor({ storage, seed, getDateKey = () => null }) {
+  #getNow;
+  #suppressJournal = false;
+
+  constructor({ storage, seed, getDateKey = () => null, getNow = () => 0 }) {
     this.events = createEmitter();
     this.save = new SaveManager(storage);
     this.economy = new Economy(this.save.data.coins, this.events);
     this.shop = new Shop({ save: this.save, economy: this.economy, events: this.events });
     this.#rng = createRng(seed >>> 0 || 1);
+    this.#getNow = () => Math.max(0, Math.floor(Number(getNow()) || 0));
     this.#getDateKey = () => {
       const key = getDateKey();
       return isValidKey(key) ? key : null;
     };
 
     // The ledger is the source of truth; mirror it into the save blob.
-    // Lifetime earn/spend totals ride along — they catch every source
-    // (rounds, chests, dailies, missions, achievements) uniformly.
-    this.events.on('coins:change', ({ coins, delta }) => {
-      this.save.data.coins = coins;
-      if (delta > 0) this.save.data.stats.coinsEarned += delta;
-      else this.save.data.stats.coinsSpent += -delta;
+    // Lifetime earn/spend totals ride along, and every movement lands in
+    // the reconciliation journal so a server can approve offline play.
+    this.events.on('coins:change', ({ coins, delta, reason, meta }) => {
+      const d = this.save.data;
+      d.coins = coins;
+      if (delta > 0) d.stats.coinsEarned += delta;
+      else d.stats.coinsSpent += -delta;
+
+      if (!this.#suppressJournal) {
+        d.journalSeq += 1;
+        d.journal.push({
+          seq: d.journalSeq,
+          t: this.#getNow(),
+          d: delta,
+          r: reason ?? '',
+          ...(meta ? { m: meta } : {}),
+        });
+        if (d.journal.length > 500) d.journal.splice(0, d.journal.length - 500);
+      }
     });
 
     // Purchases can flip shop-flavoured badges (first skin, all shapes…).
@@ -132,12 +149,37 @@ export class GameCore {
     this.save.persist();
   }
 
+  // ---------- server reconciliation ----------
+
+  getJournal() {
+    return this.save.data.journal.map((e) => ({ ...e }));
+  }
+
+  // Adopt the server's approved balance: trim acknowledged journal entries
+  // and adjust the local ledger to match. The adjustment itself is not
+  // journaled (it IS the server's answer, not new activity).
+  applySync({ coins, uptoSeq }) {
+    const d = this.save.data;
+    const seq = Math.max(0, Math.floor(Number(uptoSeq) || 0));
+    d.journal = d.journal.filter((e) => e.seq > seq);
+    const target = Math.max(0, Math.floor(Number(coins) || 0));
+    const diff = target - this.economy.coins;
+    this.#suppressJournal = true;
+    if (diff > 0) this.economy.earn(diff, 'sync');
+    else if (diff < 0) this.economy.spend(-diff, 'sync');
+    this.#suppressJournal = false;
+    this.save.persist();
+    return { adjusted: diff };
+  }
+
   // Feed one gameplay fact to the missions and pay any completions.
   #applyMissionEvent(ev) {
     this.#ensureMissions();
     const completed = missionEvent(this.save.data.missions.list, ev);
     for (const m of completed) {
-      this.economy.earn(m.reward, `mission:${m.templateId}`);
+      this.economy.earn(m.reward, `mission:${m.templateId}`, {
+        dateKey: this.save.data.missions.dateKey,
+      });
     }
     return completed;
   }
@@ -334,7 +376,7 @@ export class GameCore {
   // ---------- settings ----------
 
   setSetting(key, value) {
-    if (key !== 'sound' && key !== 'haptics') return false;
+    if (key !== 'sound' && key !== 'haptics' && key !== 'music') return false;
     this.save.data.settings[key] = Boolean(value);
     this.save.persist();
     this.events.emit('settings:change', { key, value: Boolean(value) });
@@ -520,7 +562,7 @@ export class GameCore {
           Math.floor(run.coins * T.daily.streakBonusPer * Math.min(d.daily.streak, T.daily.streakCap)),
         T.daily.bonusMax
       );
-      this.economy.earn(bonus, 'daily');
+      this.economy.earn(bonus, 'daily', { dateKey: run.dateKey, n: run.dailyNumber });
       d.daily.lastLevel = run.level;
       d.daily.bestLevel = Math.max(d.daily.bestLevel, run.level);
       result.daily = { number: run.dailyNumber, streak: d.daily.streak, bonus };
